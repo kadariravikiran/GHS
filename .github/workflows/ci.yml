@@ -34,6 +34,34 @@ jobs:
             mvn -f "$service/pom.xml" clean test
           done
 
+      - name: Package all backend services
+        run: |
+          for service in backend/*-service; do
+            echo "Packaging $service"
+            mvn -f "$service/pom.xml" package -DskipTests
+          done
+
+               - name: Test all backend services
+        run: |
+          for service in backend/*-service; do
+            echo "Testing $service"
+            mvn -f "$service/pom.xml" clean test
+          done
+
+      - name: Package all backend services
+        run: |
+          for service in backend/*-service; do
+            echo "Packaging $service"
+            mvn -f "$service/pom.xml" package -DskipTests
+          done
+
+      - name: Build Docker images
+        run: |
+          for service in backend/*-service; do
+            echo "Building Docker image for $service"
+            docker build -t "$service:latest" "$service"
+          done 
+
   frontend-ci:
     runs-on: ubuntu-latest
     steps:
