@@ -1,0 +1,39 @@
+name: GHS
+
+on:
+  push:
+    branches:
+      - dev
+      - qa
+      - production
+
+  pull_request:
+    branches:
+      - dev
+      - qa
+      - production
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: set up java 
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Test all backend services
+        run: |
+          for service in backend/*-service; do
+            echo "Testing $service"
+            mvn -f "$service/pom.xml" clean test
+          done    
+
+
+
+   
