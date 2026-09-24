@@ -70,3 +70,7 @@ jobs:
       - name: Build frontend
         run: npm run build
         working-directory: frontend
+
+      - name: Build frontend Dockerimage
+        run: docker build -t frontend:latest .
+        working-directory: frontend
