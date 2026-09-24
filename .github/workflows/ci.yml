@@ -32,8 +32,27 @@ jobs:
           for service in backend/*-service; do
             echo "Testing $service"
             mvn -f "$service/pom.xml" clean test
-          done    
+          done
 
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
 
+      - name: set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-   
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Test frontend
+        run: npm test
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
