@@ -184,12 +184,10 @@ jobs:
           for service in k8s/backend/*; do
             echo "Deploying $service"
 
+            SERVICE_NAME=$(basename "$service")
+
             kubectl apply -f "$service/deployment.yaml"
             kubectl apply -f "$service/service.yaml"
-          done
-
-
-            SERVICE_NAME=$(basename "$service")
 
             kubectl set image deployment/$SERVICE_NAME \
               $SERVICE_NAME=asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$SERVICE_NAME:${{ github.sha }}
