@@ -41,12 +41,12 @@ jobs:
             mvn -f "$service/pom.xml" package -DskipTests
           done
 
-      - name: Build Docker images
-        run: |
-          for service in backend/*-service; do
-            echo "Building Docker image for $service"
-            docker build -t "$service:latest" "$service"
-          done 
+      - name: Upload backend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jars
+          path: |
+            backend/*/target/*.jar 
 
   frontend-ci:
     runs-on: ubuntu-latest
@@ -71,6 +71,8 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      - name: Build frontend Dockerimage
-        run: docker build -t frontend:latest .
-        working-directory: frontend
+      - name: Upload frontend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/ 
