@@ -76,3 +76,68 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist/ 
+
+  build-and-push:
+    needs:
+      - backend-ci
+      - frontend-ci
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download backend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jars
+          path: backend
+
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/887456464145/locations/global/workloadIdentityPools/ghs-pool/providers/github-provider'
+          service_account: 'ghs-github-actions@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
+
+      - name: Authenticate Docker to Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet 
+
+      - name: Build backend Docker images
+        run: |
+          for service in backend/*-service; do
+            echo "Building Docker image for $service"
+            docker build \
+              -t "asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}" \
+              "$service"
+          done
+
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            -t "asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}" \
+            frontend
+
+      - name: Push backend Docker images
+        run: |
+          for service in backend/*-service; do
+            IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}"
+            echo "Pushing $IMAGE"
+            docker push "$IMAGE"
+          done
+
+      - name: Push frontend Docker image
+        run: |
+          IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}"
+          echo "Pushing $IMAGE"
+          docker push "$IMAGE" 
