@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: teacher-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: teacher-service
+
+  ports:
+    - port: 8083
+      targetPort: 8083

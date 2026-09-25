@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: attendance-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: attendance-service
+
+  ports:
+    - port: 8084
+      targetPort: 8084

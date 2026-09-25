@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: announcement-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: announcement-service
+
+  template:
+    metadata:
+      labels:
+        app: announcement-service
+
+    spec:
+      containers:
+        - name: announcement-service
+          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/announcement-service:0544d1d707a5906263ea284d2f80c1fe86956ee7
+          ports:
+            - containerPort: 8088

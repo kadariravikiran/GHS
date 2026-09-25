@@ -1,0 +1,98 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: ghs-ingress
+
+spec:
+  rules:
+    - http:
+        paths:
+
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8081
+
+          - path: /api/students
+            pathType: Prefix
+            backend:
+              service:
+                name: student-service
+                port:
+                  number: 8082
+
+          - path: /api/teachers
+            pathType: Prefix
+            backend:
+              service:
+                name: teacher-service
+                port:
+                  number: 8083
+
+          - path: /api/attendances
+            pathType: Prefix
+            backend:
+              service:
+                name: attendance-service
+                port:
+                  number: 8084
+
+          - path: /api/fees
+            pathType: Prefix
+            backend:
+              service:
+                name: fee-service
+                port:
+                  number: 8085
+
+          - path: /api/exams
+            pathType: Prefix
+            backend:
+              service:
+                name: exam-service
+                port:
+                  number: 8086
+
+          - path: /api/homeworks
+            pathType: Prefix
+            backend:
+              service:
+                name: homework-service
+                port:
+                  number: 8087
+
+          - path: /api/announcements
+            pathType: Prefix
+            backend:
+              service:
+                name: announcement-service
+                port:
+                  number: 8088
+
+          - path: /api/gallerys
+            pathType: Prefix
+            backend:
+              service:
+                name: gallery-service
+                port:
+                  number: 8089
+
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8090
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ghs-frontend
+                port:
+                  number: 80

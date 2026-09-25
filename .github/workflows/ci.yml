@@ -141,3 +141,60 @@ jobs:
           IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}"
           echo "Pushing $IMAGE"
           docker push "$IMAGE" 
+
+
+  deploy-to-gke:
+    needs:
+      - build-and-push
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/887456464145/locations/global/workloadIdentityPools/ghs-pool/providers/githubactions'
+          service_account: 'ghs-github-actions@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ghs-cluster
+          location: asia-south1-a
+          project_id: project-b1401e3c-6c22-44e2-ba6
+
+      - name: Deploy frontend
+        run: |
+          kubectl apply -f k8s/frontend/deployment.yaml
+          kubectl apply -f k8s/frontend/service.yaml
+
+          kubectl set image deployment/ghs-frontend \
+            frontend=asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}
+
+
+      - name: Deploy backend services
+        run: |
+          for service in k8s/backend/*; do
+            echo "Deploying $service"
+
+            kubectl apply -f "$service/deployment.yaml"
+            kubectl apply -f "$service/service.yaml"
+          done
+
+
+            SERVICE_NAME=$(basename "$service")
+
+            kubectl set image deployment/$SERVICE_NAME \
+              $SERVICE_NAME=asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$SERVICE_NAME:${{ github.sha }}
+          done
+
+      - name: Deploy Ingress
+        run: |
+          kubectl apply -f k8s/ingress/ingress.yaml
