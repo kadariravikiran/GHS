@@ -4,6 +4,9 @@ kind: Ingress
 metadata:
   name: ghs-ingress
 
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+
 spec:
   rules:
     - http:

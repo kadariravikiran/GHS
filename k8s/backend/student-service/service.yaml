@@ -4,6 +4,9 @@ kind: Service
 metadata:
   name: student-service
 
+  annotations:
+    cloud.google.com/backend-config: '{"default":"student-service-backendconfig"}'
+
 spec:
   type: ClusterIP
 

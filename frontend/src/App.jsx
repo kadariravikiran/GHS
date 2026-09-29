@@ -9,6 +9,7 @@ import Announcements from "./components/Announcements";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 import Login from "./components/Login";
+import StudentPortal from "./components/StudentPortal";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Announcements />
         <Contact />
         <Login />
+        <StudentPortal />
       </main>
 
       <Footer />
