@@ -17,8 +17,39 @@ spec:
         app: auth-service
 
     spec:
+      serviceAccountName: ghs-cloudsql-ksa
+
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool-v2
+
       containers:
+
         - name: auth-service
           image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/auth-service:0544d1d707a5906263ea284d2f80c1fe86956ee7
+
           ports:
             - containerPort: 8081
+
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://127.0.0.1:5432/auth_db
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ghs-db-secret
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghs-db-secret
+                  key: DB_PASSWORD
+
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.25.4
+
+          args:
+            - "--structured-logs"
+            - "--port=5432"
+            - "project-b1401e3c-6c22-44e2-ba6:asia-south1:ghs-instance"

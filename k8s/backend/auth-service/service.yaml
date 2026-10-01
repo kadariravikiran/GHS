@@ -4,6 +4,9 @@ kind: Service
 metadata:
   name: auth-service
 
+  annotations:
+    cloud.google.com/backend-config: '{"default":"auth-service-backendconfig"}'
+
 spec:
   type: ClusterIP
 
