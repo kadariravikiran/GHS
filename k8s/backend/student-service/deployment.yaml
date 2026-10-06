@@ -24,7 +24,7 @@ spec:
 
       containers:
         - name: student-service
-          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/student-service:16b59c7e9e9c541ebdcd7c3cde05560ffa4628da
+          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/student-service:f5e558428dab417269602d8c6dd4f422710c5a1b
           ports:
             - containerPort: 8082
 
