@@ -20,7 +20,7 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
 
-      - name: set up java 
+      - name: set up java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -46,7 +46,7 @@ jobs:
         with:
           name: backend-jars
           path: |
-            backend/*/target/*.jar 
+            backend/*/target/*.jar
 
   frontend-ci:
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist/ 
+          path: frontend/dist/
 
   build-and-push:
     needs:
@@ -111,7 +111,7 @@ jobs:
           service_account: 'ghs-github-actions@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
 
       - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet 
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Build backend Docker images
         run: |
@@ -140,7 +140,7 @@ jobs:
         run: |
           IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}"
           echo "Pushing $IMAGE"
-          docker push "$IMAGE" 
+          docker push "$IMAGE"
 
 
   deploy-to-gke:
@@ -186,6 +186,11 @@ jobs:
 
             SERVICE_NAME=$(basename "$service")
 
+            if [ "$SERVICE_NAME" = "student-service" ]; then
+              echo "Skipping $SERVICE_NAME - managed by Argo CD"
+              continue
+            fi
+
             kubectl apply -f "$service/deployment.yaml"
             kubectl apply -f "$service/service.yaml"
 
@@ -196,3 +201,36 @@ jobs:
       - name: Deploy Ingress
         run: |
           kubectl apply -f k8s/ingress/ingress.yaml
+
+  update-student-image:
+    if: github.event_name == 'push'
+    needs:
+      - build-and-push
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update student-service image
+        run: |
+          sed -i "s#student-service:.*#student-service:${{ github.sha }}#" k8s/backend/student-service/deployment.yaml
+
+      - name: Check updated image
+        run: |
+          grep "image:" k8s/backend/student-service/deployment.yaml
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit updated image
+        run: |
+          git add k8s/backend/student-service/deployment.yaml
+          git commit -m "chore: update student-service image to ${{ github.sha }} [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}
