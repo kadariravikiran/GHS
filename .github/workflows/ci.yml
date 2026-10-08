@@ -158,7 +158,7 @@ jobs:
 
       - name: Update backend image tags
         run: |
-          for service in backend/*-service; do
+          for service in k8s/backend/*-service; do
             SERVICE_NAME=$(basename "$service")
 
             sed -i "s#ghs-repo/$SERVICE_NAME:.*#ghs-repo/$SERVICE_NAME:${{ github.sha }}#" \
