@@ -19,6 +19,6 @@ spec:
     spec:
       containers:
         - name: teacher-service
-          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/teacher-service:0544d1d707a5906263ea284d2f80c1fe86956ee7
+          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/teacher-service:d2293207fb749a14a235d075c45f77b8160d3c9d
           ports:
             - containerPort: 8083
