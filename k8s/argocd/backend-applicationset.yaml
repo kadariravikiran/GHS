@@ -13,6 +13,7 @@ spec:
           - path: k8s/backend/*
           - path: k8s/backend/student-service
             exclude: true
+          - path: k8s/frontend   
 
   template:
     metadata:
@@ -29,3 +30,8 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: default
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true  

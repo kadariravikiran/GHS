@@ -142,67 +142,7 @@ jobs:
           echo "Pushing $IMAGE"
           docker push "$IMAGE"
 
-
-  deploy-to-gke:
-    needs:
-      - build-and-push
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: 'projects/887456464145/locations/global/workloadIdentityPools/ghs-pool/providers/githubactions'
-          service_account: 'ghs-github-actions@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
-
-      - name: Get GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ghs-cluster
-          location: asia-south1-a
-          project_id: project-b1401e3c-6c22-44e2-ba6
-
-      - name: Deploy frontend
-        run: |
-          kubectl apply -f k8s/frontend/deployment.yaml
-          kubectl apply -f k8s/frontend/service.yaml
-
-          kubectl set image deployment/ghs-frontend \
-            frontend=asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}
-
-
-      - name: Deploy backend services
-        run: |
-          for service in k8s/backend/*; do
-            echo "Deploying $service"
-
-            SERVICE_NAME=$(basename "$service")
-
-            if [ "$SERVICE_NAME" = "student-service" ]; then
-              echo "Skipping $SERVICE_NAME - managed by Argo CD"
-              continue
-            fi
-
-            kubectl apply -f "$service/deployment.yaml"
-            kubectl apply -f "$service/service.yaml"
-
-            kubectl set image deployment/$SERVICE_NAME \
-              $SERVICE_NAME=asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$SERVICE_NAME:${{ github.sha }}
-          done
-
-      - name: Deploy Ingress
-        run: |
-          kubectl apply -f k8s/ingress/ingress.yaml
-
-  update-student-image:
+  update-image-tags:
     if: github.event_name == 'push'
     needs:
       - build-and-push
@@ -216,21 +156,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update student-service image
+      - name: Update backend image tags
         run: |
-          sed -i "s#student-service:.*#student-service:${{ github.sha }}#" k8s/backend/student-service/deployment.yaml
+          for service in backend/*-service; do
+            SERVICE_NAME=$(basename "$service")
 
-      - name: Check updated image
+            sed -i "s#ghs-repo/$SERVICE_NAME:.*#ghs-repo/$SERVICE_NAME:${{ github.sha }}#" \
+              "$service/deployment.yaml"
+          done
+
+      - name: Update frontend image tag
         run: |
-          grep "image:" k8s/backend/student-service/deployment.yaml
+          sed -i "s#ghs-repo/frontend:.*#ghs-repo/frontend:${{ github.sha }}#" \
+            k8s/frontend/deployment.yaml
+
+      - name: Check updated images
+        run: |
+          grep -R "image:" k8s/backend/*/deployment.yaml k8s/frontend/deployment.yaml
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit updated image
+      - name: Commit updated images
         run: |
-          git add k8s/backend/student-service/deployment.yaml
-          git commit -m "chore: update student-service image to ${{ github.sha }} [skip ci]"
-          git push origin HEAD:${{ github.ref_name }}
+          git add k8s/backend/*/deployment.yaml k8s/frontend/deployment.yaml
+          git commit -m "chore: update application images to ${{ github.sha }} [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}          
