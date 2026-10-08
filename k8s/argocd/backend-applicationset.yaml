@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ghs-backend-applications
+  namespace: argocd
+
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/kadariravikiran/GHS.git
+        revision: qa
+        directories:
+          - path: k8s/backend/*
+          - path: k8s/backend/student-service
+            exclude: true
+
+  template:
+    metadata:
+      name: 'ghs-{{path.basename}}'
+
+    spec:
+      project: default
+
+      source:
+        repoURL: https://github.com/kadariravikiran/GHS.git
+        targetRevision: qa
+        path: '{{path}}'
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: default
