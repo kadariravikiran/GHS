@@ -2,8 +2,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: ghs-ingress
-
+  name: ghs-ingress-v2
+  namespace: default
   annotations:
     kubernetes.io/ingress.class: "gce"
 
@@ -11,7 +11,6 @@ spec:
   rules:
     - http:
         paths:
-
           - path: /api/auth
             pathType: Prefix
             backend:
@@ -99,3 +98,4 @@ spec:
                 name: ghs-frontend
                 port:
                   number: 80
+
