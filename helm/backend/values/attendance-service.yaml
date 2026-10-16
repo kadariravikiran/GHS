@@ -2,7 +2,7 @@ serviceName: attendance-service
 replicaCount: 1
 image:
   repository: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/attendance-service
-  tag: "d2c09d32a4fdfcb2f4879926a10ddc64c0973955"
+  tag: "e8d33290a2479fc14dc2f1f5b952efa12b2ca3bc"
   pullPolicy: IfNotPresent
 containerPort: 8084
 service:
