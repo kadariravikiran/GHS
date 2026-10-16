@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,12 +30,27 @@ spec:
       {{- end }}
       {{- if .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ .Values.serviceName }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | required "image.tag must be set" }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.database.enabled }}
+          env:
+            - name: DB_URL
+              value: "jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.usernameSecret.name }}
+                  key: {{ .Values.database.usernameSecret.key }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.passwordSecret.name }}
+                  key: {{ .Values.database.passwordSecret.key }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
@@ -51,3 +67,21 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- if .Values.cloudSqlProxy.enabled }}
+        - name: cloud-sql-proxy
+          image: {{ .Values.cloudSqlProxy.image | quote }}
+          args:
+            - "--structured-logs"
+            - "--port={{ .Values.database.port }}"
+            - {{ .Values.cloudSqlProxy.instanceConnectionName | quote }}
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+        {{- end }}
+

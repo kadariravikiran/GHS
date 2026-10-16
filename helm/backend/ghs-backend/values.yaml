@@ -28,3 +28,19 @@ nodeSelector: {}
 
 podAnnotations: {}
 podLabels: {}
+
+database:
+  enabled: true
+  host: 127.0.0.1
+  port: 5432
+  usernameSecret:
+    name: ghs-db-secret
+    key: username
+  passwordSecret:
+    name: ghs-db-secret
+    key: password
+
+cloudSqlProxy:
+  enabled: true
+  image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.18.2
+  instanceConnectionName: project-b1401e3c-6c22-44e2-ba6:asia-south1:ghs-pg-dev

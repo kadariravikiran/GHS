@@ -11,10 +11,13 @@ service:
 serviceAccount:
   create: false
   automount: false
-  name: ""
+  name: ghs-cloudsql-ksa
 resources: {}
 livenessProbe: {}
 readinessProbe: {}
 nodeSelector: {}
 podAnnotations: {}
 podLabels: {}
+
+database:
+  name: attendance_db
