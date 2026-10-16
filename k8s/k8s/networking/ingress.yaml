@@ -3,7 +3,7 @@ kind: Ingress
 
 metadata:
   name: ghs-ingress-v2
-  namespace: default
+  namespace: ghs
   annotations:
     kubernetes.io/ingress.class: "gce"
 
