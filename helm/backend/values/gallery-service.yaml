@@ -2,7 +2,7 @@ serviceName: gallery-service
 replicaCount: 1
 image:
   repository: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/gallery-service
-  tag: "dce3850fef88b82c9387712678dabcb1fb16a6c1"
+  tag: "f338bc03034622aecc180db5be5ab2a00844ce53"
   pullPolicy: IfNotPresent
 containerPort: 8089
 service:
