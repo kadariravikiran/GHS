@@ -1,0 +1,20 @@
+serviceName: notification-service
+replicaCount: 1
+image:
+  repository: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/notification-service
+  tag: "dce3850fef88b82c9387712678dabcb1fb16a6c1"
+  pullPolicy: IfNotPresent
+containerPort: 8090
+service:
+  type: ClusterIP
+  port: 8090
+serviceAccount:
+  create: false
+  automount: false
+  name: ""
+resources: {}
+livenessProbe: {}
+readinessProbe: {}
+nodeSelector: {}
+podAnnotations: {}
+podLabels: {}

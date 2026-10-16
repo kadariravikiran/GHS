@@ -78,6 +78,7 @@ jobs:
           path: frontend/dist/
 
   build-and-push:
+    if: github.event_name == 'push'
     needs:
       - backend-ci
       - frontend-ci
@@ -142,11 +143,11 @@ jobs:
           echo "Pushing $IMAGE"
           docker push "$IMAGE"
 
+
   update-image-tags:
     if: github.event_name == 'push'
     needs:
       - build-and-push
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -156,31 +157,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update backend image tags
+      - name: Update backend Helm image tags
         run: |
-          for service in k8s/backend/*-service; do
-            SERVICE_NAME=$(basename "$service")
-
-            sed -i "s#ghs-repo/$SERVICE_NAME:.*#ghs-repo/$SERVICE_NAME:${{ github.sha }}#" \
-              "$service/deployment.yaml"
+          for file in helm/backend/values/*.yaml; do
+            sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' "$file"
+            echo "Updated $file"
           done
 
-      - name: Update frontend image tag
+      - name: Update frontend Helm image tag
         run: |
-          sed -i "s#ghs-repo/frontend:.*#ghs-repo/frontend:${{ github.sha }}#" \
-            k8s/frontend/deployment.yaml
+          sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' \
+            helm/ghs-frontend/values.yaml
 
-      - name: Check updated images
+      - name: Verify updated image tags
         run: |
-          grep -R "image:" k8s/backend/*/deployment.yaml k8s/frontend/deployment.yaml
+          echo "Backend image tags:"
+          grep -Hn '^[[:space:]]*tag:' helm/backend/values/*.yaml
+
+          echo "Frontend image tag:"
+          grep -n '^[[:space:]]*tag:' helm/ghs-frontend/values.yaml
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit updated images
+      - name: Commit updated Helm values
         run: |
-          git add k8s/backend/*/deployment.yaml k8s/frontend/deployment.yaml
-          git commit -m "chore: update application images to ${{ github.sha }} [skip ci]"
-          git push origin HEAD:${{ github.ref_name }}          
+          git add helm/backend/values/*.yaml helm/ghs-frontend/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "No image tag changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: update Helm image tags to ${{ github.sha }} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+

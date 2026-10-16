@@ -1,0 +1,30 @@
+serviceName: ""
+
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: false
+  automount: false
+  name: ""
+
+resources: {}
+
+livenessProbe: {}
+
+readinessProbe: {}
+
+nodeSelector: {}
+
+podAnnotations: {}
+podLabels: {}
