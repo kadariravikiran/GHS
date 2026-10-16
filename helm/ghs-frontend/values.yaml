@@ -8,7 +8,7 @@ replicaCount: 1
 image:
   repository: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend
   pullPolicy: IfNotPresent
-  tag: "e8d33290a2479fc14dc2f1f5b952efa12b2ca3bc"
+  tag: "928743fd66a43d89eb77609bcccac7aced0e7695"
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []

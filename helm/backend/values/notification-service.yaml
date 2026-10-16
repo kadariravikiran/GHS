@@ -2,7 +2,7 @@ serviceName: notification-service
 replicaCount: 1
 image:
   repository: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/notification-service
-  tag: "e8d33290a2479fc14dc2f1f5b952efa12b2ca3bc"
+  tag: "928743fd66a43d89eb77609bcccac7aced0e7695"
   pullPolicy: IfNotPresent
 containerPort: 8090
 service:
