@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: gallery-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: gallery-service
+
+  ports:
+    - port: 8089
+      targetPort: 8089

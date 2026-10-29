@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import About from "./components/About";
@@ -9,8 +11,17 @@ import Announcements from "./components/Announcements";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 import Login from "./components/Login";
+import StudentPortal from "./components/StudentPortal";
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
   return (
     <>
       <Navbar />
@@ -24,7 +35,14 @@ function App() {
         <Gallery />
         <Announcements />
         <Contact />
-        <Login />
+
+        {!isLoggedIn && (
+          <Login onLoginSuccess={handleLoginSuccess} />
+        )}
+
+        {isLoggedIn && (
+          <StudentPortal />
+        )}
       </main>
 
       <Footer />

@@ -1,0 +1,60 @@
+serviceName: ""
+
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: false
+  automount: false
+  name: ""
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+nodeSelector: {}
+
+podAnnotations: {}
+podLabels: {}
+
+database:
+  enabled: true
+  host: 127.0.0.1
+  port: 5432
+  usernameSecret:
+    name: ghs-db-secret
+    key: username
+  passwordSecret:
+    name: ghs-db-secret
+    key: password
+
+cloudSqlProxy:
+  enabled: true
+  image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.18.2
+  instanceConnectionName: project-b1401e3c-6c22-44e2-ba6:asia-south1:ghs-pg-dev

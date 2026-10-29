@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   GraduationCap,
   Lock,
@@ -6,6 +7,47 @@ import {
 } from "lucide-react";
 
 function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("role", data.role);
+
+      setMessage("Login successful.");
+    } catch (error) {
+      setMessage(error.message || "Unable to login.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <section className="login-section" id="login">
       <div className="container">
@@ -42,7 +84,7 @@ function Login() {
               Sign in to continue to your account.
             </p>
 
-            <form>
+            <form onSubmit={handleLogin}>
 
               <div className="form-group">
                 <label htmlFor="login-email">
@@ -56,6 +98,9 @@ function Login() {
                     id="login-email"
                     type="text"
                     placeholder="Enter your ID or email"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    required
                   />
                 </div>
               </div>
@@ -72,21 +117,29 @@ function Login() {
                     id="login-password"
                     type="password"
                     placeholder="Enter your password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
                   />
                 </div>
               </div>
 
-              <button type="button" className="primary-button login-button">
-                Sign In
+              <button
+                type="submit"
+                className="primary-button login-button"
+                disabled={loading}
+              >
+                {loading ? "Signing In..." : "Sign In"}
                 <ArrowRight size={18} />
               </button>
 
             </form>
 
-            <p className="login-note">
-              Portal authentication will be connected to the
-              <strong> auth-service</strong> later.
-            </p>
+            {message && (
+              <p className="login-note">
+                {message}
+              </p>
+            )}
 
           </div>
 

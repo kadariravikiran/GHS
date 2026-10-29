@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: student-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: student-service
+
+  template:
+    metadata:
+      labels:
+        app: student-service
+
+    spec:
+      serviceAccountName: ghs-cloudsql-ksa
+
+      nodeSelector:
+          cloud.google.com/gke-nodepool:  cloudsql-pool
+
+      containers:
+        - name: student-service
+          image: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/student-service:bd5368beac5c6335de9b12f2f54b2b02185962e3
+          ports:
+            - containerPort: 8082
+
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://127.0.0.1:5432/ghs_student
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ghs-db-secret
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghs-db-secret
+                  key: DB_PASSWORD 
+
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.25.4
+          args:
+            - "--structured-logs"
+            - "--port=5432"
+            - "project-b1401e3c-6c22-44e2-ba6:asia-south1:ghs-instance"

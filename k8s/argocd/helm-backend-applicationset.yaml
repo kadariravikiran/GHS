@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ghs-backend-helm
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - serviceName: announcement-service
+            valuesFile: announcement-service.yaml
+          - serviceName: attendance-service
+            valuesFile: attendance-service.yaml
+          - serviceName: auth-service
+            valuesFile: auth-service.yaml
+          - serviceName: exam-service
+            valuesFile: exam-service.yaml
+          - serviceName: fee-service
+            valuesFile: fee-service.yaml
+          - serviceName: gallery-service
+            valuesFile: gallery-service.yaml
+          - serviceName: homework-service
+            valuesFile: homework-service.yaml
+          - serviceName: notification-service
+            valuesFile: notification-service.yaml
+          - serviceName: student-service
+            valuesFile: student-service.yaml
+          - serviceName: teacher-service
+            valuesFile: teacher-service.yaml
+  template:
+    metadata:
+      name: 'ghs-{{ .serviceName }}'
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/kadariravikiran/GHS.git
+          targetRevision: qa
+          ref: values
+        - repoURL: https://github.com/kadariravikiran/GHS.git
+          targetRevision: qa
+          path: helm/backend/ghs-backend
+          helm:
+            valueFiles:
+              - '$values/helm/backend/values/{{ .valuesFile }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: ghs
