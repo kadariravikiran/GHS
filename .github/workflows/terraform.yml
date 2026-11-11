@@ -1,0 +1,48 @@
+name: Terraform GCP
+
+on:
+  push:
+    branches:
+      - qa
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    
+    env:
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/887456464145/locations/global/workloadIdentityPools/ghs-pool/providers/githubactions'
+          service_account: 'ghs-github-actions@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Plan
+        run: terraform plan
+
