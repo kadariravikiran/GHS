@@ -1,3 +1,4 @@
+
 name: GHS
 
 on:
@@ -14,47 +15,71 @@ on:
       - production
 
 jobs:
+
+  # =====================================
+  # BACKEND CI - MATRIX STRATEGY
+  # =====================================
+
   backend-ci:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+
+      matrix:
+        service:
+          - announcement-service
+          - attendance-service
+          - auth-service
+          - exam-service
+          - fee-service
+          - gallery-service
+          - homework-service
+          - notification-service
+          - student-service
+          - teacher-service
+
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: set up java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
 
-      - name: Test all backend services
+      - name: Test microservice
         run: |
-          for service in backend/*-service; do
-            echo "Testing $service"
-            mvn -f "$service/pom.xml" clean test
-          done
+          echo "Testing ${{ matrix.service }}"
+          mvn -f "backend/${{ matrix.service }}/pom.xml" clean test
 
-      - name: Package all backend services
+      - name: Package microservice
         run: |
-          for service in backend/*-service; do
-            echo "Packaging $service"
-            mvn -f "$service/pom.xml" package -DskipTests
-          done
+          echo "Packaging ${{ matrix.service }}"
+          mvn -f "backend/${{ matrix.service }}/pom.xml" package -DskipTests
 
-      - name: Upload backend build artifacts
+      - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-jars
-          path: |
-            backend/*/target/*.jar
+          name: backend-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/target/*.jar
+          if-no-files-found: error
+
+  # =====================================
+  # FRONTEND CI
+  # =====================================
 
   frontend-ci:
     runs-on: ubuntu-latest
+
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: set up node
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -77,8 +102,13 @@ jobs:
           name: frontend-dist
           path: frontend/dist/
 
+  # =====================================
+  # BUILD AND PUSH DOCKER IMAGES
+  # =====================================
+
   build-and-push:
     if: github.event_name == 'push'
+
     needs:
       - backend-ci
       - frontend-ci
@@ -93,11 +123,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download backend build artifacts
+      - name: Download backend artifacts
         uses: actions/download-artifact@v4
         with:
-          name: backend-jars
-          path: backend
+          pattern: backend-*
+          path: backend-artifacts
+
+      - name: Restore backend JAR files
+        run: |
+          for service in backend/*-service; do
+            service_name=$(basename "$service")
+            artifact_dir="backend-artifacts/backend-${service_name}"
+
+            mkdir -p "$service/target"
+
+            echo "Restoring JAR for $service_name"
+
+            cp "$artifact_dir/"*.jar "$service/target/"
+          done
 
       - name: Download frontend build artifacts
         uses: actions/download-artifact@v4
@@ -118,6 +161,7 @@ jobs:
         run: |
           for service in backend/*-service; do
             echo "Building Docker image for $service"
+
             docker build \
               -t "asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}" \
               "$service"
@@ -133,6 +177,7 @@ jobs:
         run: |
           for service in backend/*-service; do
             IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}"
+
             echo "Pushing $IMAGE"
             docker push "$IMAGE"
           done
@@ -140,14 +185,20 @@ jobs:
       - name: Push frontend Docker image
         run: |
           IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}"
+
           echo "Pushing $IMAGE"
           docker push "$IMAGE"
 
+  # =====================================
+  # UPDATE HELM IMAGE TAGS
+  # =====================================
 
   update-image-tags:
     if: github.event_name == 'push'
+
     needs:
       - build-and-push
+
     runs-on: ubuntu-latest
 
     permissions:
