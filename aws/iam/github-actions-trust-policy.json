@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowGitHubActionsFromGHSQA",
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::872522504985:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:kadariravikiran/GHS:ref:refs/heads/qa"
+        }
+      }
+    }
+  ]
+}

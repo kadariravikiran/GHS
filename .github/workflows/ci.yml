@@ -48,7 +48,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
           cache: maven
 
       - name: Test microservice
@@ -58,7 +58,6 @@ jobs:
 
       - name: Package microservice
         run: |
-          echo "Packaging ${{ matrix.service }}"
           mvn -f "backend/${{ matrix.service }}/pom.xml" package -DskipTests
 
       - name: Upload backend artifact
@@ -101,9 +100,12 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist/
+          if-no-files-found: error
 
   # =====================================
   # BUILD AND PUSH DOCKER IMAGES
+  # GCP: dev, qa, production
+  # AWS: qa only
   # =====================================
 
   build-and-push:
@@ -119,9 +121,20 @@ jobs:
       contents: read
       id-token: write
 
+    env:
+      AWS_REGION: ap-south-1
+      AWS_ACCOUNT_ID: '872522504985'
+      ECR_REPOSITORY: ghs-app
+      ECR_REGISTRY: 872522504985.dkr.ecr.ap-south-1.amazonaws.com
+      GCP_REGISTRY: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # ---------------------------------
+      # DOWNLOAD BUILD ARTIFACTS
+      # ---------------------------------
 
       - name: Download backend artifacts
         uses: actions/download-artifact@v4
@@ -130,16 +143,29 @@ jobs:
           path: backend-artifacts
 
       - name: Restore backend JAR files
+        shell: bash
         run: |
-          for service in backend/*-service; do
-            service_name=$(basename "$service")
-            artifact_dir="backend-artifacts/backend-${service_name}"
+          services=(
+            announcement-service
+            attendance-service
+            auth-service
+            exam-service
+            fee-service
+            gallery-service
+            homework-service
+            notification-service
+            student-service
+            teacher-service
+          )
 
-            mkdir -p "$service/target"
+          for service in "${services[@]}"; do
+            artifact_dir="backend-artifacts/backend-${service}"
 
-            echo "Restoring JAR for $service_name"
+            mkdir -p "backend/${service}/target"
 
-            cp "$artifact_dir/"*.jar "$service/target/"
+            echo "Restoring JAR for ${service}"
+
+            cp "${artifact_dir}/"*.jar "backend/${service}/target/"
           done
 
       - name: Download frontend build artifacts
@@ -148,6 +174,27 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
+      # ---------------------------------
+      # AWS OIDC AUTHENTICATION
+      # QA BRANCH ONLY
+      # ---------------------------------
+
+      - name: Configure AWS credentials
+        if: github.ref == 'refs/heads/qa'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872522504985:role/GitHubActions-GHS-ECR-Role
+          aws-region: ap-south-1
+          role-session-name: GitHubActionsGHS
+
+      - name: Authenticate Docker to Amazon ECR
+        if: github.ref == 'refs/heads/qa'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ---------------------------------
+      # GCP AUTHENTICATION
+      # ---------------------------------
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -155,42 +202,145 @@ jobs:
           service_account: 'artifact-service@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
 
       - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+        run: |
+          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      # ---------------------------------
+      # BUILD BACKEND IMAGES
+      # ---------------------------------
 
       - name: Build backend Docker images
+        shell: bash
         run: |
-          for service in backend/*-service; do
-            echo "Building Docker image for $service"
+          services=(
+            announcement-service
+            attendance-service
+            auth-service
+            exam-service
+            fee-service
+            gallery-service
+            homework-service
+            notification-service
+            student-service
+            teacher-service
+          )
 
-            docker build \
-              -t "asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}" \
-              "$service"
+          for service in "${services[@]}"; do
+            echo "Building ${service}"
+
+            GCP_IMAGE="${GCP_REGISTRY}/${service}:${GITHUB_SHA}"
+
+            docker build -t "${GCP_IMAGE}" "backend/${service}"
+
+            if [[ "${GITHUB_REF}" == "refs/heads/qa" ]]; then
+              AWS_SHA_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-${GITHUB_SHA}"
+              AWS_LATEST_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-latest"
+
+              docker tag "${GCP_IMAGE}" "${AWS_SHA_IMAGE}"
+              docker tag "${GCP_IMAGE}" "${AWS_LATEST_IMAGE}"
+            fi
           done
+
+      # ---------------------------------
+      # BUILD FRONTEND IMAGE
+      # ---------------------------------
 
       - name: Build frontend Docker image
         run: |
-          docker build \
-            -t "asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}" \
-            frontend
+          GCP_IMAGE="${GCP_REGISTRY}/frontend:${GITHUB_SHA}"
 
-      - name: Push backend Docker images
+          docker build -t "${GCP_IMAGE}" frontend
+
+          if [[ "${GITHUB_REF}" == "refs/heads/qa" ]]; then
+            AWS_SHA_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-${GITHUB_SHA}"
+            AWS_LATEST_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-latest"
+
+            docker tag "${GCP_IMAGE}" "${AWS_SHA_IMAGE}"
+            docker tag "${GCP_IMAGE}" "${AWS_LATEST_IMAGE}"
+          fi
+
+      # ---------------------------------
+      # PUSH BACKEND IMAGES TO GCP
+      # ---------------------------------
+
+      - name: Push backend Docker images to GCP
+        shell: bash
         run: |
-          for service in backend/*-service; do
-            IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/$(basename "$service"):${{ github.sha }}"
+          services=(
+            announcement-service
+            attendance-service
+            auth-service
+            exam-service
+            fee-service
+            gallery-service
+            homework-service
+            notification-service
+            student-service
+            teacher-service
+          )
 
-            echo "Pushing $IMAGE"
-            docker push "$IMAGE"
+          for service in "${services[@]}"; do
+            IMAGE="${GCP_REGISTRY}/${service}:${GITHUB_SHA}"
+
+            echo "Pushing ${IMAGE}"
+            docker push "${IMAGE}"
           done
 
-      - name: Push frontend Docker image
-        run: |
-          IMAGE="asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo/frontend:${{ github.sha }}"
+      # ---------------------------------
+      # PUSH FRONTEND IMAGE TO GCP
+      # ---------------------------------
 
-          echo "Pushing $IMAGE"
-          docker push "$IMAGE"
+      - name: Push frontend Docker image to GCP
+        run: |
+          docker push "${GCP_REGISTRY}/frontend:${GITHUB_SHA}"
+
+      # ---------------------------------
+      # PUSH BACKEND IMAGES TO AWS ECR
+      # QA BRANCH ONLY
+      # ---------------------------------
+
+      - name: Push backend Docker images to AWS ECR
+        if: github.ref == 'refs/heads/qa'
+        shell: bash
+        run: |
+          services=(
+            announcement-service
+            attendance-service
+            auth-service
+            exam-service
+            fee-service
+            gallery-service
+            homework-service
+            notification-service
+            student-service
+            teacher-service
+          )
+
+          for service in "${services[@]}"; do
+            SHA_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-${GITHUB_SHA}"
+            LATEST_IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-latest"
+
+            echo "Pushing ${SHA_IMAGE}"
+            docker push "${SHA_IMAGE}"
+
+            echo "Pushing ${LATEST_IMAGE}"
+            docker push "${LATEST_IMAGE}"
+          done
+
+      # ---------------------------------
+      # PUSH FRONTEND IMAGE TO AWS ECR
+      # ---------------------------------
+
+      - name: Push frontend Docker image to AWS ECR
+        if: github.ref == 'refs/heads/qa'
+        run: |
+          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-${GITHUB_SHA}"
+          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-latest"
 
   # =====================================
   # UPDATE HELM IMAGE TAGS
+  # GCP: ALL DEPLOYMENT BRANCHES
+  # AWS: QA ONLY
   # =====================================
 
   update-image-tags:
@@ -204,29 +354,97 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      AWS_ECR_URI: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update backend Helm image tags
+      # ---------------------------------
+      # UPDATE EXISTING GCP VALUES
+      # ---------------------------------
+
+      - name: Update backend GCP Helm image tags
         run: |
           for file in helm/backend/values/*.yaml; do
             sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' "$file"
-            echo "Updated $file"
+            echo "Updated GCP values: $file"
           done
 
-      - name: Update frontend Helm image tag
+      - name: Update frontend GCP Helm image tag
         run: |
           sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' \
             helm/ghs-frontend/values.yaml
 
-      - name: Verify updated image tags
+      # ---------------------------------
+      # CREATE SEPARATE AWS VALUES
+      # AND UPDATE AWS IMAGE REFERENCES
+      # QA ONLY
+      # ---------------------------------
+
+      - name: Prepare AWS backend Helm values
+        if: github.ref == 'refs/heads/qa'
+        shell: bash
         run: |
-          echo "Backend image tags:"
+          mkdir -p helm/aws/backend/values
+
+          # Create AWS copies from GCP values only when missing.
+          for file in helm/backend/values/*.yaml; do
+            filename=$(basename "$file")
+            aws_file="helm/aws/backend/values/${filename}"
+
+            if [[ ! -f "$aws_file" ]]; then
+              cp "$file" "$aws_file"
+            fi
+
+            service="${filename%.yaml}"
+
+            sed -i "s|^  repository:.*|  repository: \"${AWS_ECR_URI}\"|" "$aws_file"
+            sed -i "s|^  tag:.*|  tag: \"${service}-${GITHUB_SHA}\"|" "$aws_file"
+
+            echo "Updated AWS values: ${aws_file}"
+          done
+
+      - name: Prepare AWS frontend Helm values
+        if: github.ref == 'refs/heads/qa'
+        run: |
+          mkdir -p helm/aws/frontend
+
+          if [[ ! -f helm/aws/frontend/values.yaml ]]; then
+            cp helm/ghs-frontend/values.yaml helm/aws/frontend/values.yaml
+          fi
+
+          sed -i "s|^  repository:.*|  repository: \"${AWS_ECR_URI}\"|" \
+            helm/aws/frontend/values.yaml
+
+          sed -i 's|^  tag:.*|  tag: "frontend-${{ github.sha }}"|' \
+            helm/aws/frontend/values.yaml
+
+      # ---------------------------------
+      # VERIFY HELM VALUES
+      # ---------------------------------
+
+      - name: Verify GCP Helm image tags
+        run: |
+          echo "GCP backend tags:"
           grep -Hn '^[[:space:]]*tag:' helm/backend/values/*.yaml
 
-          echo "Frontend image tag:"
+          echo "GCP frontend tag:"
           grep -n '^[[:space:]]*tag:' helm/ghs-frontend/values.yaml
+
+      - name: Verify AWS Helm image tags
+        if: github.ref == 'refs/heads/qa'
+        run: |
+          echo "AWS backend values:"
+          grep -Hn -E 'repository:|tag:' helm/aws/backend/values/*.yaml
+
+          echo "AWS frontend values:"
+          grep -n -E 'repository:|tag:' helm/aws/frontend/values.yaml
+
+      # ---------------------------------
+      # COMMIT HELM CHANGES
+      # ---------------------------------
 
       - name: Configure Git
         run: |
@@ -235,13 +453,19 @@ jobs:
 
       - name: Commit updated Helm values
         run: |
-          git add helm/backend/values/*.yaml helm/ghs-frontend/values.yaml
+          git add helm/backend/values/*.yaml
+          git add helm/ghs-frontend/values.yaml
+
+          if [[ "${GITHUB_REF}" == "refs/heads/qa" ]]; then
+            git add helm/aws/
+          fi
 
           if git diff --cached --quiet; then
-            echo "No image tag changes to commit"
+            echo "No Helm image tag changes to commit"
             exit 0
           fi
 
-          git commit -m "chore: update Helm image tags to ${{ github.sha }} [skip ci]"
+          git commit -m "chore: update Helm image tags to ${GITHUB_SHA} [skip ci]"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+
 
