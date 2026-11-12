@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "AllowGitHubActionsFromGHSQA",
+      "Sid": "AllowGitHubActionsFromGHSBranches",
       "Effect": "Allow",
       "Principal": {
         "Federated": "arn:aws:iam::872522504985:oidc-provider/token.actions.githubusercontent.com"
@@ -11,7 +11,12 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:kadariravikiran/GHS:ref:refs/heads/qa"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:kadariravikiran/GHS:ref:refs/heads/main",
+            "repo:kadariravikiran/GHS:ref:refs/heads/qa",
+            "repo:kadariravikiran/GHS:ref:refs/heads/production",
+            "repo:kadariravikiran/GHS:ref:refs/heads/dev"
+          ]
         }
       }
     }
