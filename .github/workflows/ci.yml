@@ -19,7 +19,7 @@ on:
 jobs:
 
   # ==========================================
-  # BACKEND CI - 10 MICROSERVICES
+  # JOB 1: BACKEND CI
   # ==========================================
 
   backend-ci:
@@ -29,6 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 4
+
       matrix:
         service:
           - announcement-service
@@ -56,11 +57,13 @@ jobs:
       - name: Test microservice
         run: |
           echo "Testing ${{ matrix.service }}"
+
           mvn -f "backend/${{ matrix.service }}/pom.xml" clean test
 
       - name: Package microservice
         run: |
           echo "Packaging ${{ matrix.service }}"
+
           mvn -f "backend/${{ matrix.service }}/pom.xml" package -DskipTests
 
       - name: Upload backend artifact
@@ -72,7 +75,7 @@ jobs:
 
 
   # ==========================================
-  # FRONTEND CI
+  # JOB 2: FRONTEND CI
   # ==========================================
 
   frontend-ci:
@@ -109,129 +112,7 @@ jobs:
 
 
   # ==========================================
-  # GCP BUILD AND PUSH
-  # Runs on dev, qa and production
-  # ==========================================
-
-  build-and-push-gcp:
-    name: Build and Push Images to GCP
-
-    if: >-
-      github.event_name == 'push' &&
-      (
-        github.ref == 'refs/heads/dev' ||
-        github.ref == 'refs/heads/qa' ||
-        github.ref == 'refs/heads/production'
-      )
-
-    needs:
-      - backend-ci
-      - frontend-ci
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      id-token: write
-
-    env:
-      GCP_REGISTRY: asia-south1-docker.pkg.dev/project-b1401e3c-6c22-44e2-ba6/ghs-repo
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download backend artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: backend-*
-          path: backend-artifacts
-
-      - name: Restore backend JAR files
-        shell: bash
-        run: |
-          services=(
-            announcement-service
-            attendance-service
-            auth-service
-            exam-service
-            fee-service
-            gallery-service
-            homework-service
-            notification-service
-            student-service
-            teacher-service
-          )
-
-          for service in "${services[@]}"; do
-            artifact_dir="backend-artifacts/backend-${service}"
-
-            mkdir -p "backend/${service}/target"
-
-            echo "Restoring ${service}"
-
-            cp "${artifact_dir}/"*.jar "backend/${service}/target/"
-          done
-
-      - name: Download frontend artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-
-      - name: Set up Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: 'projects/887456464145/locations/global/workloadIdentityPools/ghs-pool/providers/githubactions'
-          service_account: 'artifact-service@project-b1401e3c-6c22-44e2-ba6.iam.gserviceaccount.com'
-
-      - name: Authenticate Docker to Artifact Registry
-        run: |
-          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-      - name: Build and push backend images to GCP
-        shell: bash
-        run: |
-          services=(
-            announcement-service
-            attendance-service
-            auth-service
-            exam-service
-            fee-service
-            gallery-service
-            homework-service
-            notification-service
-            student-service
-            teacher-service
-          )
-
-          for service in "${services[@]}"; do
-            IMAGE="${GCP_REGISTRY}/${service}:${GITHUB_SHA}"
-
-            echo "Building ${IMAGE}"
-
-            docker build -t "${IMAGE}" "backend/${service}"
-
-            echo "Pushing ${IMAGE}"
-
-            docker push "${IMAGE}"
-          done
-
-      - name: Build and push frontend image to GCP
-        run: |
-          IMAGE="${GCP_REGISTRY}/frontend:${GITHUB_SHA}"
-
-          docker build -t "${IMAGE}" frontend
-
-          docker push "${IMAGE}"
-
-
-  # ==========================================
-  # AWS BUILD AND PUSH
-  # Runs on main, dev, qa and production
+  # JOB 3: BUILD AND PUSH TO AWS ECR
   # ==========================================
 
   build-and-push-aws:
@@ -263,8 +144,18 @@ jobs:
       ECR_REGISTRY: 872522504985.dkr.ecr.ap-south-1.amazonaws.com
 
     steps:
+
+      # --------------------------------------
+      # Checkout
+      # --------------------------------------
+
       - name: Checkout code
         uses: actions/checkout@v4
+
+
+      # --------------------------------------
+      # Download backend artifacts
+      # --------------------------------------
 
       - name: Download backend artifacts
         uses: actions/download-artifact@v4
@@ -289,14 +180,21 @@ jobs:
           )
 
           for service in "${services[@]}"; do
+
             artifact_dir="backend-artifacts/backend-${service}"
 
             mkdir -p "backend/${service}/target"
 
-            echo "Restoring ${service}"
+            echo "Restoring JAR for ${service}"
 
             cp "${artifact_dir}/"*.jar "backend/${service}/target/"
+
           done
+
+
+      # --------------------------------------
+      # Download frontend artifacts
+      # --------------------------------------
 
       - name: Download frontend artifacts
         uses: actions/download-artifact@v4
@@ -304,7 +202,10 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-      # AWS OIDC authentication
+
+      # --------------------------------------
+      # AWS OIDC Authentication
+      # --------------------------------------
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -317,10 +218,18 @@ jobs:
         run: |
           aws sts get-caller-identity
 
+
+      # --------------------------------------
+      # Authenticate Docker with ECR
+      # --------------------------------------
+
       - name: Authenticate Docker to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build backend images
+
+      # --------------------------------------
+      # Build backend Docker images
+      # --------------------------------------
 
       - name: Build backend Docker images
         shell: bash
@@ -352,7 +261,10 @@ jobs:
 
           done
 
-      # Build frontend image
+
+      # --------------------------------------
+      # Build frontend Docker image
+      # --------------------------------------
 
       - name: Build frontend Docker image
         run: |
@@ -364,7 +276,10 @@ jobs:
 
           docker tag "${SHA_IMAGE}" "${LATEST_IMAGE}"
 
-      # Push backend images
+
+      # --------------------------------------
+      # Push backend images to ECR
+      # --------------------------------------
 
       - name: Push backend images to AWS ECR
         shell: bash
@@ -398,83 +313,14 @@ jobs:
 
           done
 
-      # Push frontend image
+
+      # --------------------------------------
+      # Push frontend images to ECR
+      # --------------------------------------
 
       - name: Push frontend images to AWS ECR
         run: |
           docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-${GITHUB_SHA}"
 
           docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-latest"
-
-
-  # ==========================================
-  # UPDATE GCP HELM IMAGE TAGS
-  # Only after successful GCP publishing
-  # ==========================================
-
-  update-gcp-image-tags:
-    name: Update GCP Helm Image Tags
-
-    if: >-
-      github.event_name == 'push' &&
-      (
-        github.ref == 'refs/heads/dev' ||
-        github.ref == 'refs/heads/qa' ||
-        github.ref == 'refs/heads/production'
-      )
-
-    needs:
-      - build-and-push-gcp
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Update backend GCP Helm image tags
-        shell: bash
-        run: |
-          for file in helm/backend/values/*.yaml; do
-
-            sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' "$file"
-
-            echo "Updated GCP values: ${file}"
-
-          done
-
-      - name: Update frontend GCP Helm image tag
-        run: |
-          sed -i 's/^  tag: .*/  tag: "${{ github.sha }}"/' helm/ghs-frontend/values.yaml
-
-      - name: Verify GCP Helm image tags
-        run: |
-          grep -Hn '^[[:space:]]*tag:' helm/backend/values/*.yaml
-
-          grep -n '^[[:space:]]*tag:' helm/ghs-frontend/values.yaml
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit updated GCP Helm values
-        shell: bash
-        run: |
-          git add helm/backend/values/*.yaml
-
-          git add helm/ghs-frontend/values.yaml
-
-          if git diff --cached --quiet; then
-            echo "No GCP Helm image tag changes"
-            exit 0
-          fi
-
-          git commit -m "chore: update GCP Helm image tags to ${GITHUB_SHA} [skip ci]"
-
-          git push origin "HEAD:${GITHUB_REF_NAME}"
 
