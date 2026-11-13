@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ghs-frontend
+description: GHS frontend Helm chart for Amazon EKS
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

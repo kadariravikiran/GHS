@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghs-postgresql-headless
+  labels:
+    app.kubernetes.io/name: ghs-postgresql
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: ghs-postgresql
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghs-postgresql
+  labels:
+    app.kubernetes.io/name: ghs-postgresql
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: ghs-postgresql
+  ports:
+    - name: postgres
+      port: {{ .Values.service.port }}
+      targetPort: postgres
+      protocol: TCP

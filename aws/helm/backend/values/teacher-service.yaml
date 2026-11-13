@@ -1,0 +1,26 @@
+serviceName: teacher-service
+
+replicaCount: 1
+
+image:
+  repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
+  tag: "teacher-service-7b73e3975efec2fa9ec32e28fe0b02fd4283077f"
+  pullPolicy: IfNotPresent
+
+containerPort: 8083
+
+service:
+  type: ClusterIP
+  port: 8083
+
+database:
+  enabled: true
+  host: ghs-postgresql
+  port: 5432
+  name: teacher_db
+  usernameSecret:
+    name: ghs-db-credentials
+    key: TEACHER_DB_USERNAME
+  passwordSecret:
+    name: ghs-db-credentials
+    key: TEACHER_DB_PASSWORD

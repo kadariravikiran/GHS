@@ -1,0 +1,26 @@
+serviceName: homework-service
+
+replicaCount: 1
+
+image:
+  repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
+  tag: "homework-service-7b73e3975efec2fa9ec32e28fe0b02fd4283077f"
+  pullPolicy: IfNotPresent
+
+containerPort: 8087
+
+service:
+  type: ClusterIP
+  port: 8087
+
+database:
+  enabled: true
+  host: ghs-postgresql
+  port: 5432
+  name: homework_db
+  usernameSecret:
+    name: ghs-db-credentials
+    key: HOMEWORK_DB_USERNAME
+  passwordSecret:
+    name: ghs-db-credentials
+    key: HOMEWORK_DB_PASSWORD

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ghs-postgresql-init
+data:
+  init-databases.sh: |
+{{ .Files.Get "files/init-databases.sh" | indent 4 }}

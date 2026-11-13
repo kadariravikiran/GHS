@@ -1,0 +1,26 @@
+serviceName: attendance-service
+
+replicaCount: 1
+
+image:
+  repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
+  tag: "attendance-service-7b73e3975efec2fa9ec32e28fe0b02fd4283077f"
+  pullPolicy: IfNotPresent
+
+containerPort: 8084
+
+service:
+  type: ClusterIP
+  port: 8084
+
+database:
+  enabled: true
+  host: ghs-postgresql
+  port: 5432
+  name: attendance_db
+  usernameSecret:
+    name: ghs-db-credentials
+    key: ATTENDANCE_DB_USERNAME
+  passwordSecret:
+    name: ghs-db-credentials
+    key: ATTENDANCE_DB_PASSWORD
