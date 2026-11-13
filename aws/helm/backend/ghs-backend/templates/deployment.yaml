@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,12 +6,15 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ .Values.serviceName }}
     app.kubernetes.io/instance: {{ .Release.Name }}
+
 spec:
   replicas: {{ .Values.replicaCount }}
+
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ .Values.serviceName }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+
   template:
     metadata:
       labels:
@@ -19,50 +23,68 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
     spec:
       {{- if .Values.serviceAccount.name }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
       {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
       containers:
         - name: {{ .Values.serviceName }}
+
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | required "image.tag must be set" }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+
           {{- if .Values.database.enabled }}
           env:
             - name: DB_URL
               value: "jdbc:postgresql://{{ required "database.host must be set" .Values.database.host }}:{{ .Values.database.port }}/{{ required "database.name must be set" .Values.database.name }}"
+
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.database.usernameSecret.name }}
                   key: {{ .Values.database.usernameSecret.key }}
+
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.database.passwordSecret.name }}
                   key: {{ .Values.database.passwordSecret.key }}
           {{- end }}
+
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
+
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+
           {{- with .Values.readinessProbe }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+

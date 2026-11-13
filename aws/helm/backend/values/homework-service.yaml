@@ -1,5 +1,13 @@
 serviceName: homework-service
 
+startupProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
 replicaCount: 1
 
 image:
