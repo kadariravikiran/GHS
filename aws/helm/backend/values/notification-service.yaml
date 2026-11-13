@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
-  tag: "notification-service-7b73e3975efec2fa9ec32e28fe0b02fd4283077f"
+  tag: "notification-service-1157a9ed0a71aa71963fa47334babd33262dd75e"
   pullPolicy: IfNotPresent
 
 containerPort: 8090
