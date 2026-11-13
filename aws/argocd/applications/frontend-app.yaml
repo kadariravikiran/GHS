@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: ghs-frontend
+  namespace: argocd
+
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://github.com/kadariravikiran/GHS.git
+      targetRevision: qa
+      path: aws/helm/frontend/ghs-frontend
+      helm:
+        releaseName: ghs-frontend
+        valueFiles:
+          - $values/aws/helm/frontend/values.yaml
+
+    - repoURL: https://github.com/kadariravikiran/GHS.git
+      targetRevision: qa
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ghs
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

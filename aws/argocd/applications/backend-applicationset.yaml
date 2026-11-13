@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+metadata:
+  name: ghs-backend
+  namespace: argocd
+
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
+  generators:
+    - list:
+        elements:
+          - service: auth-service
+          - service: student-service
+          - service: teacher-service
+          - service: attendance-service
+          - service: fee-service
+          - service: exam-service
+          - service: homework-service
+          - service: announcement-service
+          - service: gallery-service
+          - service: notification-service
+
+  template:
+    metadata:
+      name: '{{.service}}'
+      namespace: argocd
+
+    spec:
+      project: default
+
+      sources:
+        - repoURL: https://github.com/kadariravikiran/GHS.git
+          targetRevision: qa
+          path: aws/helm/backend/ghs-backend
+          helm:
+            releaseName: '{{.service}}'
+            valueFiles:
+              - '$values/aws/helm/backend/values/{{.service}}.yaml'
+
+        - repoURL: https://github.com/kadariravikiran/GHS.git
+          targetRevision: qa
+          ref: values
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: ghs
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
