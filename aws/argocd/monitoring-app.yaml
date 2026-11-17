@@ -1,22 +1,25 @@
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: ghs-monitoring
   namespace: argocd
+
 spec:
   project: default
 
   sources:
-    # Helm chart source
+    # Main monitoring Helm chart
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
       targetRevision: 93.3.1
       helm:
         releaseName: monitoring
+        skipCrds: true
         valueFiles:
           - $values/aws/helm/monitoring/values.yaml
 
-    # Git repository containing our Helm values
+    # Git repository containing Helm values
     - repoURL: https://github.com/kadariravikiran/GHS.git
       targetRevision: qa
       ref: values
@@ -30,3 +33,4 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - ClientSideApplyMigration=false
+
