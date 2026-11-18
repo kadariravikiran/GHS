@@ -1,6 +1,7 @@
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
+
 metadata:
   name: ghs-monitoring
   namespace: argocd
@@ -9,7 +10,7 @@ spec:
   project: default
 
   sources:
-    # Main monitoring Helm chart
+    # Helm chart source
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
       targetRevision: 93.3.1
