@@ -1,0 +1,32 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: ghs-otel-collector
+  namespace: argocd
+
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+      chart: opentelemetry-collector
+      targetRevision: 0.180.0
+      helm:
+        releaseName: ghs-otel-collector
+        valueFiles:
+          - $values/aws/helm/otel-collector/values.yaml
+
+    - repoURL: https://github.com/kadariravikiran/GHS.git
+      targetRevision: qa
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
