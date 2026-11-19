@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     env:
@@ -178,6 +178,7 @@ jobs:
           )
 
           for service in "${services[@]}"; do
+
             artifact_dir="backend-artifacts/backend-${service}"
 
             mkdir -p "backend/${service}/target"
@@ -185,6 +186,7 @@ jobs:
             echo "Restoring JAR for ${service}"
 
             cp "${artifact_dir}/"*.jar "backend/${service}/target/"
+
           done
 
 
@@ -368,4 +370,74 @@ jobs:
           docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-${GITHUB_SHA}"
 
           docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:frontend-latest"
+
+
+      # ======================================
+      # UPDATE AUTH SERVICE HELM IMAGE
+      # ======================================
+
+      - name: Update Auth Service Helm image tag
+        if: github.ref == 'refs/heads/qa'
+
+        env:
+          IMAGE_TAG: auth-service-${{ github.sha }}
+
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          helm_file = Path(
+              "aws/helm/backend/values/auth-service.yaml"
+          )
+
+          content = helm_file.read_text()
+
+          pattern = r'(?m)^(\s*tag:\s*)["\']?[^"\']+["\']?\s*$'
+
+          updated_content, count = re.subn(
+              pattern,
+              lambda match: match.group(1) + '"' + os.environ["IMAGE_TAG"] + '"',
+              content
+          )
+
+          if count != 1:
+              raise SystemExit(
+                  f"Expected exactly one image tag in {helm_file}, found {count}"
+              )
+
+          helm_file.write_text(updated_content)
+
+          print("Updated Auth Service Helm image:")
+          print(os.environ["IMAGE_TAG"])
+          PY
+
+
+      # ======================================
+      # COMMIT AND PUSH HELM CHANGE
+      # ======================================
+
+      - name: Commit and push Helm image update
+        if: github.ref == 'refs/heads/qa'
+
+        env:
+          IMAGE_TAG: auth-service-${{ github.sha }}
+
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          FILE="aws/helm/backend/values/auth-service.yaml"
+
+          if git diff --quiet -- "$FILE"; then
+            echo "No Helm image change detected."
+            exit 0
+          fi
+
+          git add "$FILE"
+
+          git commit -m "chore(helm): update auth-service image to ${IMAGE_TAG} [skip ci]"
+
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
