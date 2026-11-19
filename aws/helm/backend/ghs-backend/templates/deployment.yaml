@@ -27,7 +27,7 @@ spec:
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
 
     spec:
       {{- if .Values.serviceAccount.name }}
@@ -45,8 +45,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | required "image.tag must be set" }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
 
-          {{- if .Values.database.enabled }}
+          {{- if or .Values.database.enabled .Values.extraEnv }}
           env:
+            {{- if .Values.database.enabled }}
             - name: DB_URL
               value: "jdbc:postgresql://{{ required "database.host must be set" .Values.database.host }}:{{ .Values.database.port }}/{{ required "database.name must be set" .Values.database.name }}"
 
@@ -61,6 +62,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.database.passwordSecret.name }}
                   key: {{ .Values.database.passwordSecret.key }}
+            {{- end }}
+
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
 
           ports:

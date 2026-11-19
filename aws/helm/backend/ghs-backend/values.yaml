@@ -1,3 +1,4 @@
+
 serviceName: ""
 
 replicaCount: 1
@@ -38,6 +39,9 @@ database:
     name: ghs-db-secret
     key: password
 
+# Additional environment variables for individual services
+extraEnv: []
+
 livenessProbe:
   httpGet:
     path: /actuator/health/liveness
@@ -57,5 +61,8 @@ readinessProbe:
   failureThreshold: 3
 
 nodeSelector: {}
+
 podAnnotations: {}
+
 podLabels: {}
+
