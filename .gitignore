@@ -24,3 +24,18 @@ target/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Terraform generated files
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# AWS local credentials
+AKIA*.txt
+
+# Local backups
+.github/workflows/*.backup
+.github/workflows/*.pre-aws-backup
+
+# Helm packages
+*.tgz

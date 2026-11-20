@@ -1,0 +1,35 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: ghs-loki
+  namespace: argocd
+
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: loki
+      targetRevision: 21.4.2
+      helm:
+        releaseName: ghs-loki
+        valueFiles:
+          - $values/aws/helm/loki/values.yaml
+        parameters:
+          - name: test.enabled
+            value: "false"
+
+    - repoURL: https://github.com/kadariravikiran/GHS.git
+      targetRevision: qa
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+

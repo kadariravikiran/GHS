@@ -1,0 +1,27 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ghs-monitoring-crds
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-operator-crds
+    targetRevision: 33.0.2
+    helm:
+      releaseName: monitoring-crds
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ClientSideApplyMigration=false
+

@@ -1,0 +1,56 @@
+
+serviceName: auth-service
+
+startupProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+replicaCount: 1
+
+image:
+  repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
+  tag: "auth-service-590b1c4dc70e07bac7118fef61e6cf20743ac65b"
+  pullPolicy: IfNotPresent
+
+containerPort: 8081
+
+service:
+  type: ClusterIP
+  port: 8081
+
+database:
+  enabled: true
+  host: ghs-postgresql
+  port: 5432
+  name: auth_db
+  usernameSecret:
+    name: ghs-db-credentials
+    key: AUTH_DB_USERNAME
+  passwordSecret:
+    name: ghs-db-credentials
+    key: AUTH_DB_PASSWORD
+
+# OpenTelemetry configuration
+extraEnv:
+  - name: OTEL_SERVICE_NAME
+    value: auth-service
+
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://ghs-otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317
+
+  - name: OTEL_EXPORTER_OTLP_PROTOCOL
+    value: grpc
+
+  - name: OTEL_TRACES_EXPORTER
+    value: otlp
+
+  - name: OTEL_METRICS_EXPORTER
+    value: none
+
+  - name: OTEL_LOGS_EXPORTER
+    value: otlp
+

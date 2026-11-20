@@ -1,0 +1,142 @@
+# GHS Observability - kube-prometheus-stack
+# Chart version: 93.3.1
+
+# --------------------------------------------------
+# Prometheus
+# --------------------------------------------------
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    replicas: 1
+    shards: 1
+
+    # Retain metrics for 15 days.
+    retention: 15d
+
+    # Keep metrics below the 30Gi PVC capacity.
+    retentionSize: 24GiB
+
+    # Prometheus persistent storage.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 30Gi
+
+    # Initial resource allocation.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1500m
+        memory: 2Gi
+
+    # Keep chart-managed ServiceMonitor and PodMonitor
+    # discovery behavior for the initial installation.
+    serviceMonitorSelectorNilUsesHelmValues: true
+    podMonitorSelectorNilUsesHelmValues: true
+
+# --------------------------------------------------
+# Grafana
+# --------------------------------------------------
+grafana:
+  enabled: true
+
+  defaultDashboardsEnabled: true
+
+  # Use a Kubernetes Secret for admin credentials.
+  # We will create this Secret separately.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  # Persistent Grafana storage.
+  persistence:
+    enabled: true
+    type: sts
+    storageClassName: gp3
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# --------------------------------------------------
+# Alertmanager
+# --------------------------------------------------
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    replicas: 1
+    retention: 120h
+
+    # Persistent alert state.
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# --------------------------------------------------
+# Kubernetes state monitoring
+# --------------------------------------------------
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# --------------------------------------------------
+# Prometheus Operator
+# --------------------------------------------------
+prometheusOperator:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+# --------------------------------------------------
+# Node Exporter
+# --------------------------------------------------
+# Temporarily disabled because Nodes 1 and 3
+# currently have no available Pod slots.
+# We will configure node monitoring separately.
+nodeExporter:
+  enabled: false
