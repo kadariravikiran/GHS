@@ -52,5 +52,5 @@ extraEnv:
     value: none
 
   - name: OTEL_LOGS_EXPORTER
-    value: none
+    value: otlp
 
