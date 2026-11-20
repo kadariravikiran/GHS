@@ -75,10 +75,15 @@ config:
       timeout: 5s
 
   exporters:
+    # Export distributed traces to Tempo
     otlp:
       endpoint: ghs-tempo.monitoring.svc.cluster.local:4317
       tls:
         insecure: true
+
+    # Export application logs to Loki using OTLP HTTP
+    otlphttp/loki:
+      endpoint: http://ghs-loki.monitoring.svc.cluster.local:3100/otlp
 
   extensions:
     health_check:
@@ -89,6 +94,7 @@ config:
       - health_check
 
     pipelines:
+      # Distributed traces -> Tempo
       traces:
         receivers:
           - otlp
@@ -98,6 +104,7 @@ config:
         exporters:
           - otlp
 
+      # Metrics -> Debug
       metrics:
         receivers:
           - otlp
@@ -107,6 +114,7 @@ config:
         exporters:
           - debug
 
+      # Application logs -> Loki
       logs:
         receivers:
           - otlp
@@ -114,5 +122,5 @@ config:
           - memory_limiter
           - batch
         exporters:
-          - debug
+          - otlphttp/loki
 
