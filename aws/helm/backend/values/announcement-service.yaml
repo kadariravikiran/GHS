@@ -32,3 +32,10 @@ database:
   passwordSecret:
     name: ghs-db-credentials
     key: ANNOUNCEMENT_DB_PASSWORD
+
+extraEnv:
+  - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+    value: "3"
+  - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+    value: "1"
+
