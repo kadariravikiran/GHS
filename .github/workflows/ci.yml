@@ -150,6 +150,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # --------------------------------------
+      # OPENTELEMETRY COLLECTOR VALIDATION
+      # --------------------------------------
+
+      - name: Verify OpenTelemetry Collector components
+        run: |
+          docker pull otel/opentelemetry-collector-contrib:0.163.2
+
+          docker run --rm \
+            otel/opentelemetry-collector-contrib:0.163.2 \
+            components | grep -i -A5 -B5 prometheus
 
       # --------------------------------------
       # DOWNLOAD BACKEND ARTIFACTS
@@ -378,7 +389,6 @@ jobs:
 
       - name: Update Auth Service Helm image tag
         if: github.ref == 'refs/heads/qa'
-
         env:
           IMAGE_TAG: auth-service-${{ github.sha }}
 
@@ -420,7 +430,6 @@ jobs:
 
       - name: Commit and push Helm image update
         if: github.ref == 'refs/heads/qa'
-
         env:
           IMAGE_TAG: auth-service-${{ github.sha }}
 
