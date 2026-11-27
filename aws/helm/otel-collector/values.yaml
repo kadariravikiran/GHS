@@ -55,6 +55,12 @@ ports:
     servicePort: 8888
     protocol: TCP
 
+  application-metrics:
+    enabled: true
+    containerPort: 9464
+    servicePort: 9464
+    protocol: TCP
+
 config:
   receivers:
     otlp:
@@ -85,6 +91,11 @@ config:
     otlphttp/loki:
       endpoint: http://ghs-loki.monitoring.svc.cluster.local:3100/otlp
 
+    # Expose application metrics for Prometheus scraping
+    prometheus:
+      endpoint: 0.0.0.0:9464
+      namespace: ghs
+
   extensions:
     health_check:
       endpoint: ${env:MY_POD_IP}:13133
@@ -104,7 +115,7 @@ config:
         exporters:
           - otlp
 
-      # Metrics -> Debug
+      # Application metrics -> Prometheus
       metrics:
         receivers:
           - otlp
@@ -112,7 +123,7 @@ config:
           - memory_limiter
           - batch
         exporters:
-          - debug
+          - prometheus
 
       # Application logs -> Loki
       logs:
