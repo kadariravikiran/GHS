@@ -55,7 +55,7 @@ ports:
     servicePort: 8888
     protocol: TCP
 
-  application-metrics:
+  app-metrics:
     enabled: true
     containerPort: 9464
     servicePort: 9464
@@ -135,3 +135,24 @@ config:
         exporters:
           - otlphttp/loki
 
+# Additional Kubernetes resources
+extraManifests:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: ghs-otel-collector-application
+      namespace: monitoring
+      labels:
+        release: monitoring
+    spec:
+      namespaceSelector:
+        matchNames:
+          - monitoring
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: opentelemetry-collector
+          app.kubernetes.io/instance: ghs-otel-collector
+      endpoints:
+        - port: app-metrics
+          path: /metrics
+          interval: 30s          
