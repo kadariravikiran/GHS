@@ -1,0 +1,158 @@
+
+# GHS OpenTelemetry Collector
+# Chart: open-telemetry/opentelemetry-collector
+# Chart version: 0.180.0
+
+mode: deployment
+
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: "0.163.2"
+  pullPolicy: IfNotPresent
+
+command:
+  name: otelcol-contrib
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+    appProtocol: grpc
+
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+
+  jaeger-compact:
+    enabled: false
+
+  jaeger-thrift:
+    enabled: false
+
+  jaeger-grpc:
+    enabled: false
+
+  zipkin:
+    enabled: false
+
+  metrics:
+    enabled: true
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+
+  app-metrics:
+    enabled: true
+    containerPort: 9464
+    servicePort: 9464
+    protocol: TCP
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+
+    batch:
+      send_batch_size: 1024
+      timeout: 5s
+
+  exporters:
+    # Export distributed traces to Tempo
+    otlp:
+      endpoint: ghs-tempo.monitoring.svc.cluster.local:4317
+      tls:
+        insecure: true
+
+    # Export application logs to Loki using OTLP HTTP
+    otlphttp/loki:
+      endpoint: http://ghs-loki.monitoring.svc.cluster.local:3100/otlp
+
+    # Expose application metrics for Prometheus scraping
+    prometheus:
+      endpoint: 0.0.0.0:9464
+      namespace: ghs
+
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  service:
+    extensions:
+      - health_check
+
+    pipelines:
+      # Distributed traces -> Tempo
+      traces:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlp
+
+      # Application metrics -> Prometheus
+      metrics:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - prometheus
+
+      # Application logs -> Loki
+      logs:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlphttp/loki
+
+# Additional Kubernetes resources
+extraManifests:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: ghs-otel-collector-application
+      namespace: monitoring
+      labels:
+        release: monitoring
+    spec:
+      namespaceSelector:
+        matchNames:
+          - monitoring
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: opentelemetry-collector
+          app.kubernetes.io/instance: ghs-otel-collector
+      endpoints:
+        - port: app-metrics
+          path: /metrics
+          interval: 30s          

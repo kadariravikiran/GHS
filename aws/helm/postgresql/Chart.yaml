@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ghs-postgresql
+description: PostgreSQL database deployment for GHS on Amazon EKS
+type: application
+version: 0.1.0
+appVersion: "17"
