@@ -13,7 +13,7 @@ replicaCount: 1
 
 image:
   repository: 872522504985.dkr.ecr.ap-south-1.amazonaws.com/ghs-app
-  tag: "auth-service-1be6d8caca3ca295dba28a9e7c678b32483d63ce"
+  tag: "auth-service-3d005725865ce9772e49adfd71191433df0a4a49"
   pullPolicy: IfNotPresent
 
 containerPort: 8081
